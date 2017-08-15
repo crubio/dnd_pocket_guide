@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.2.4/foundation.min.css">
+	<title>DnD 5e class reference</title>
+	<base />
+
+	<style type="text/css">
+		
+		h3 {
+			font-size: 18px;
+		}
+
+		a {
+			display: block;
+			margin:4px 0;
+		}
+
+		.dnd-app {
+			padding: 0 8px;
+		}
+
+		.loading {
+			background-color:#AAA;
+			opacity: .4;
+			height:100%;
+			width:100%;
+		}
+
+		.loading img {
+			display:block;
+			position: absolute;
+			height:100px;
+			width:100px;
+			top: 50%;
+			left: 50%;
+			margin: -50px 0px 0px -50px;
+		}
+
+		.proficiencies {
+			margin-bottom:8px;
+			padding:8px;
+		}
+
+		.add-profs {
+			padding:0 15px;
+			float:left !important;
+		}
+
+		.header {
+			border-bottom:1px solid #999;
+		}
+
+		.title {
+			font-weight: bold;
+		}
+
+		.content-section {
+			margin-bottom: 16px;
+		}
+
+
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		angular
+			.module('DnDApp', [])
+			.controller('mainController', mainController)
+			.config(config)
+			.factory('dataservice', dataservice);
+
+		function config($locationProvider) {
+			$locationProvider.html5Mode(true);
+		}
+
+		function dataservice($http, $q) {
+			const interface = 'http://www.dnd5eapi.co/api/';
+			return {
+				classes: getClasses,
+				profs: getProficienciesByClassName,
+				classDetail: getClassDetails
+			}
+
+			// Returns all classes available
+			function getClasses() {
+				return $http.get(interface+'classes');
+			}
+
+			// Uses class name for lookup
+			function getProficienciesByClassName(className) {
+				className = className.toLowerCase();
+				return $http.get(interface+'proficiencies'+'/'+className);
+			}
+
+			// Takes a resource url
+			function getClassDetails(resource) {
+				return $http.get(resource);
+			}
+ 		}
+
+		function mainController($scope, dataservice) {
+			$scope.test = 'DnD5e app loaded';
+			$scope.selected = '';
+
+			$scope.showClassData = function (classData) {
+				dataservice.classDetail(classData.url)
+					.then(function(response){
+						$scope.classData = response.data;
+						$scope.selected = response.data.name;
+					})
+			}
+
+			// Initialize scope data
+			function init() {
+				// Initial load of available classes
+				dataservice.classes()
+					.then(function(response){
+						$scope.classes = response.data;
+					});
+			}
+
+			init();
+
+			
+		}
+	</script>
+	<div class="dnd-app" ng-app="DnDApp" ng-controller="mainController">
+		<div class="row">
+    		<div class="small-12 columns">
+    			<h2>DnD 5e pocket reference</h2>
+    		</div>
+    	</div>
+    	<aside class="row">
+    		<div class="small-2 columns" style="background-color:#EEE;">
+    			<h3>Classes</h3>
+    		</div>
+    		<div class="small-10 columns" style="background-color:#DDD;">
+    			<h3>Proficiencies</h3>
+    		</div>
+    	</aside>
+    	<div class="row">
+    		<!-- Generate class list -->
+    		<div class="small-2 columns" style="background-color:#DDD;">
+    			<a ng-href="#" ng-repeat="(key, value) in classes.results" ng-click="showClassData(value)">{{value.name}}</a>
+    		</div>
+    		<div class="small-10 columns proficiencies" style="background-color:#EEE;">
+
+				<div ng-if="classData" class="small-12 columns">
+					<h4>{{classData.name}} ({{classData.saving_throws[0].name}},{{classData.saving_throws[1].name}})</h4>
+					<p>Hit die: {{classData.hit_die}}</p>
+				</div>
+
+    			<div class="starting-profs content-section small-12 columns">
+    				<div ng-if="classData.proficiencies" class="title">
+    					<span class="title">Starting proficiencies</span>
+    				</div>
+	    			<div class="small-6 columns">
+	    				<div ng-repeat="row in classData.proficiencies track by $index" ng-if="$index % 2 === 0">{{row.name}}</div>
+	    			</div>
+	    			<div class="small-6 columns">
+	    				<div ng-repeat="row in classData.proficiencies track by $index" ng-if="$index % 2 !== 0">{{row.name}}</div>
+	    			</div>
+	    		</div>
+
+	    		<div class="additional-profs content-section small-12 columns">
+	    			<div ng-if="classData.proficiency_choices" class="title">
+    					<span class="title">Additional proficiency choices</span>
+    				</div>
+    				<div class="small-6 add-profs columns" ng-repeat="(key,row) in classData.proficiency_choices">
+    					<div>Choose {{row.choose}}: </div>
+    					<div ng-repeat="choice in row.from">{{choice.name}}</div>
+    				</div>
+	    		</div>
+    		</div>
+    	</div>
+	</div>
+</body>
+</html>
